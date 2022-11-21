@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<head>
+    <meta charset="UTF-8">
+    <title>Reconhecimento de dígitos manuscritos</title>
+</head>
+
+<body>
+    <canvas id = "canvas" width="100" height="100" style="display: block"></canvas>
+    <canvas id = "canvas1" width="28" height="28" style="display: block"></canvas>
+    <button id="button" type="button">Send Image</button>
+    <p id="p1">Dígito reconhecido: </p>
+</body>
+
+<style>
+    #canvas {
+        border: 1px solid black;
+    }
+
+    #canvas1 {
+        border: 1px solid black;
+    }
+</style>
+
+<script>
+
+    const canvas = document.querySelector("#canvas");
+    const canvas1 = document.querySelector("#canvas1");
+    const btn = document.querySelector("button");
+    const p = document.getElementById("p1");
+    const ctx = canvas.getContext("2d");
+    const ctx1 = canvas1.getContext("2d");
+    let painting = false;
+
+    const getBase64StringFromDataURL = (dataURL) =>
+        dataURL.replace('data:', '').replace(/^.+,/, '');
+
+    function startPosition(e) {
+        painting = true;
+        draw(e);
+    }
+
+    function finishedPosition() {
+        let image = new Image();
+        let strDataUri;
+
+        ctx.beginPath();
+        ctx1.beginPath();
+        painting = false;
+
+        strDataUri = canvas.toDataURL('image/base64');
+        image.src = strDataUri;
+        image.onload = function(){
+            ctx1.drawImage(image,0,0,100,100,0,0,28,28);
+        };
+        ctx1.stroke();
+    }
+
+    function draw(e) {
+        if (!painting)
+            return
+        else {
+            ctx.lineWidth = 5;
+            ctx.lineCap = "round";
+            ctx.lineTo(e.clientX, e.clientY);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(e.clientX, e.clientY);
+        }
+    }
+
+    function sendRequest() {
+
+        $(document).ready(function () {
+
+            let url = 'http://lucaralves.santa.pt:8080/digitrecognition/api/postImage';
+            let strDataUri1;
+
+            strDataUri1 = canvas1.toDataURL('image/base64');
+
+            const base64 = getBase64StringFromDataURL(strDataUri1);
+
+            console.log(base64);
+
+            $.ajax({
+                url: url,
+                type: "POST",
+                data: base64,
+                dataType: 'json',
+                success: function (data,status,xhr) {
+                    console.log(data)
+                    console.log(data.base64);
+                    printResult(data.base64);
+                },
+                error: function (error) {
+                    console.log(error)
+                    printResult(error)
+                }
+            })
+        })
+
+    }
+
+    function printResult(result) {
+        p.innerHTML = "Dígito reconhecido: " + result;
+    }
+
+    // Event Listeners.
+    canvas.addEventListener("mousedown", startPosition);
+    canvas.addEventListener("mouseup", finishedPosition);
+    canvas.addEventListener("mousemove", draw);
+    btn.addEventListener("click", function () {
+        sendRequest();
+    });
+
+</script>
+
+</html>
